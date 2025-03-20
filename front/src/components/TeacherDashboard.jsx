@@ -1,111 +1,79 @@
-import React, { useState } from "react";
-import { Bar } from "react-chartjs-2";
-import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Title } from "chart.js";
-
-// Register chart components
-ChartJS.register(BarElement, CategoryScale, LinearScale, Title);
+import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { Card, CardContent, Typography, Avatar, CircularProgress } from "@mui/material";
+import { motion } from "framer-motion";
 
 const TeacherDashboard = () => {
-  // Sample Data for Subjects
-  const initialClasses = {
-    ClassA: {
-      Math: { pass: 15, fail: 5, notAttended: 3 },
-      Science: { pass: 18, fail: 2, notAttended: 3 },
-      English: { pass: 12, fail: 6, notAttended: 5 },
-    },
-    ClassB: {
-      Math: { pass: 20, fail: 7, notAttended: 2 },
-      Science: { pass: 14, fail: 8, notAttended: 4 },
-      English: { pass: 17, fail: 5, notAttended: 4 },
-    },
-    ClassC: {
-      Math: { pass: 22, fail: 3, notAttended: 4 },
-      Science: { pass: 19, fail: 6, notAttended: 2 },
-      English: { pass: 14, fail: 7, notAttended: 6 },
-    },
-  };
+  const location = useLocation();
+  const facultyId = location.state?.facultyId || "Unknown Faculty";
+  const [facultyDetails, setFacultyDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [selectedClass, setSelectedClass] = useState("ClassA");
+  useEffect(() => {
+    console.log("Faculty ID from location state:", facultyId); // Log facultyId
 
-  // Get Subjects for the selected class
-  const subjects = Object.keys(initialClasses[selectedClass]);
+    const fetchFacultyDetails = async () => {
+      if (!facultyId) return;
+      setLoading(true);
+      try {
+        const response = await fetch(`http://localhost:5000/api/faculty/${facultyId}`);
+        if (!response.ok) throw new Error("Faculty not found");
 
-  // Chart Data Preparation
-  const chartData = {
-    labels: subjects,
-    datasets: [
-      {
-        label: "Pass",
-        data: subjects.map((subject) => initialClasses[selectedClass][subject].pass),
-        backgroundColor: "green",
-      },
-      {
-        label: "Fail",
-        data: subjects.map((subject) => initialClasses[selectedClass][subject].fail),
-        backgroundColor: "red",
-      },
-      {
-        label: "Not Attended",
-        data: subjects.map((subject) => initialClasses[selectedClass][subject].notAttended),
-        backgroundColor: "gray",
-      },
-    ],
-  };
+        const data = await response.json();
+        console.log("Faculty details fetched:", data); // Log fetched data
+        setFacultyDetails(data);
+      } catch (error) {
+        console.error("Error fetching faculty details:", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFacultyDetails();
+  }, [facultyId]);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-2xl">Loading...</div>;
+  if (error) return <div className="min-h-screen flex items-center justify-center text-red-600">{error}</div>;
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Teacher Dashboard</h1>
-
-      {/* Class Selection */}
-      <label className="block font-semibold mb-2">Select Class:</label>
-      <select
-        value={selectedClass}
-        onChange={(e) => setSelectedClass(e.target.value)}
-        className="border p-2 mb-4"
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
+      <motion.div
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
       >
-        {Object.keys(initialClasses).map((className) => (
-          <option key={className} value={className}>
-            {className}
-          </option>
-        ))}
-      </select>
+        <Card className="shadow-lg rounded-xl">
+          <CardContent className="p-6 text-center">
+            <Typography variant="h4" className="font-bold text-gray-800 mb-4">
+              Faculty Dashboard
+            </Typography>
 
-      {/* Subject Performance Table */}
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-2">Pass/Fail/Not Attended Count</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="border p-2">Subject</th>
-                <th className="border p-2">Pass</th>
-                <th className="border p-2">Fail</th>
-                <th className="border p-2">Not Attended</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subjects.map((subject) => (
-                <tr key={subject}>
-                  <td className="border p-2">{subject}</td>
-                  <td className="border p-2">{initialClasses[selectedClass][subject].pass}</td>
-                  <td className="border p-2">{initialClasses[selectedClass][subject].fail}</td>
-                  <td className="border p-2">{initialClasses[selectedClass][subject].notAttended}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            {facultyDetails ? (
+              <>
+                {/* Faculty Avatar */}
+                <Avatar sx={{ width: 80, height: 80 }} className="mx-auto bg-blue-500">
+                  {facultyDetails.name?.charAt(0)}
+                </Avatar>
 
-      {/* Chart in a Card View */}
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-2">Performance Overview</h2>
-        <div className="bg-white shadow-md rounded-lg p-4 w-full max-w-md mx-auto">
-          <div className="w-full h-64">
-            <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false }} />
-          </div>
-        </div>
-      </div>
+                {/* Faculty Info */}
+                <Typography variant="h5" className="font-semibold text-gray-900 mt-3">
+                  {facultyDetails.name}
+                </Typography>
+                <Typography variant="subtitle1" className="text-gray-600">
+                  Faculty ID: {facultyDetails.facultyId}
+                </Typography>
+              </>
+            ) : (
+              <Typography variant="h6" className="text-center text-red-500">
+                Faculty details not found.
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 };

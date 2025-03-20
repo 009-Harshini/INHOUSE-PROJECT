@@ -1,39 +1,58 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion"; 
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import StudentDashboard from "./StudentDashboard";
+import TeacherDashboard from "./TeacherDashboard";
 
 const LoginPage = () => {
   const [isAdmin, setIsAdmin] = useState(true);
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [confirmUsername, setConfirmUsername] = useState("");
   const [error, setError] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [sid, setSid] = useState(""); // Store SID after login
+  const [sid, setSid] = useState("");
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:5000/api/login", {
+      const endpoint = isAdmin 
+        ? "http://localhost:5000/api/faculty-login"
+        : "http://localhost:5000/api/login";
+  
+      const payload = isAdmin 
+        ? { fid: username, confirmFid: confirmUsername }
+        : { sid: username, confirmSid: confirmUsername };
+  
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sid: username, confirmSid: password }),
+        body: JSON.stringify(payload),
       });
-
+  
       const data = await response.json();
+      console.log("Response Data:", data); // Debugging
+  
       if (data.valid) {
         setIsLoggedIn(true);
-        setSid(username); // Store SID after login
         setError("");
+  
+        if (isAdmin) {
+          console.log("Navigating with facultyId:", data.facultyId); // Debugging
+          navigate("/teacherdashboard", { state: { facultyId: data.facultyId } });
+        } else {
+          setSid(username);
+        }
       } else {
-        setError("Invalid Student ID!");
+        setError(data.message);
       }
     } catch (error) {
       setError("Server Error! Please try again.");
     }
   };
-
+  
   if (isLoggedIn && !isAdmin) {
-    return <StudentDashboard sid={sid} />; // Pass SID to StudentDashboard
+    return <StudentDashboard sid={sid} />;
   }
 
   return (
@@ -50,7 +69,7 @@ const LoginPage = () => {
               className={`w-1/2 py-2 rounded-l-lg ${isAdmin ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-700"}`}
               onClick={() => setIsAdmin(true)}
             >
-             Faculty
+              Faculty
             </button>
             <button
               className={`w-1/2 py-2 rounded-r-lg ${!isAdmin ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-700"}`}
@@ -75,12 +94,12 @@ const LoginPage = () => {
             <form onSubmit={handleLogin}>
               <div className="mb-4">
                 <label className="block text-gray-700">
-                  {isAdmin ? "Username" : "Student ID"}
+                  {isAdmin ? "Faculty ID" : "Student ID"}
                 </label>
                 <input
                   type="text"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                  placeholder={isAdmin ? "Enter username" : "Enter Student ID"}
+                  placeholder={isAdmin ? "Enter Faculty ID" : "Enter Student ID"}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
@@ -88,14 +107,14 @@ const LoginPage = () => {
 
               <div className="mb-4">
                 <label className="block text-gray-700">
-                  {isAdmin ? "Password" : "Confirm Student ID"}
+                  {isAdmin ? "Confirm Faculty ID" : "Confirm Student ID"}
                 </label>
                 <input
-                  type="password"
+                  type="text"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                  placeholder={isAdmin ? "Enter password" : "Re-enter Student ID"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={isAdmin ? "Re-enter Faculty ID" : "Re-enter Student ID"}
+                  value={confirmUsername}
+                  onChange={(e) => setConfirmUsername(e.target.value)}
                 />
               </div>
 
